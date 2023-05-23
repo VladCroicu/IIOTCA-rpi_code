@@ -1,21 +1,18 @@
-#Modified by smartbuilds.io
-#Date: 27.09.20
-#Desc: This scrtipt script..
-
 import cv2 as cv
 from imutils.video.pivideostream import PiVideoStream
 import imutils
 import time
 from datetime import datetime
 import numpy as np
+import pyrebase
 
 class VideoCamera(object):
-    def __init__(self, flip = False, file_type  = ".jpg", photo_string= "stream_photo"):
-        # self.vs = PiVideoStream(resolution=(1920, 1080), framerate=30).start()
+    def __init__(self, flip = False, file_type  = ".jpg", photo_string= "home/raspberry_user/pi/stream_photo"):
+     
         self.vs = PiVideoStream().start()
-        self.flip = flip # Flip frame vertically
-        self.file_type = file_type # image type i.e. .jpg
-        self.photo_string = photo_string # Name to save the photo
+        self.flip = flip 
+        self.file_type = file_type 
+        self.photo_string = photo_string 
         time.sleep(2.0)
 
     def __del__(self):
@@ -32,9 +29,30 @@ class VideoCamera(object):
         self.previous_frame = jpeg
         return jpeg.tobytes()
 
-    # Take a photo, called by camera button
+   
     def take_picture(self):
+        config={
+             "apiKey":"AIzaSyA-EpLwR5QMbg65iXo8iOVR5F9Fjf8LWB4",
+             "authDomain":"test-74fe7.firebaseapp.com",
+             "databaseURL":"https://test-74fe7-default-rtdb.firebaseio.com",
+             "projectId":"test-74fe7",
+             "storageBucket":"test-74fe7.appspot.com",
+             "serviceAccount":"serviceAccountKey.json"}
+ 
+ 
+ 
+        firebaseStorage = pyrebase.initialize_app(config)
+        storage = firebaseStorage.storage()
+        database = firebaseStorage.database()
+
         frame = self.flip_if_needed(self.vs.read())
         ret, image = cv.imencode(self.file_type, frame)
-        today_date = datetime.now().strftime("%m%d%Y-%H%M%S") # get current time
-        cv.imwrite(str(self.photo_string + "_" + today_date + self.file_type), frame)
+        today_date = datetime.now().strftime("%m%d%Y-%H%M%S") 
+        name=str(self.photo_string + "_" + today_date + self.file_type)
+        cv.imwrite(name, frame)
+        storage.child(name).put(name)
+        uploaded_url=storage.child(name).get_url(None)
+        image_metadata={
+            "name":name,
+            "url":uploaded_url}
+        database.child("home/raspberry_user/pi").push(image_metadata)
